@@ -101,7 +101,7 @@ func TestHostNeedsProvisioning(t *testing.T) {
 					Namespace: "myns",
 				},
 				Spec: BareMetalHostSpec{
-					Online: true,
+					PoweredOn: true,
 				},
 			},
 			Expected: false,
@@ -115,15 +115,15 @@ func TestHostNeedsProvisioning(t *testing.T) {
 					Namespace: "myns",
 				},
 				Spec: BareMetalHostSpec{
-					Image:  &Image{},
-					Online: true,
+					Image:     &Image{},
+					PoweredOn: true,
 				},
 			},
 			Expected: false,
 		},
 
 		{
-			Scenario: "with image url, online",
+			Scenario: "with image url, powered on",
 			Host: BareMetalHost{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "myhost",
@@ -133,14 +133,14 @@ func TestHostNeedsProvisioning(t *testing.T) {
 					Image: &Image{
 						URL: "not-empty",
 					},
-					Online: true,
+					PoweredOn: true,
 				},
 			},
 			Expected: true,
 		},
 
 		{
-			Scenario: "with image url, offline",
+			Scenario: "with image url, powered off",
 			Host: BareMetalHost{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "myhost",
@@ -150,7 +150,7 @@ func TestHostNeedsProvisioning(t *testing.T) {
 					Image: &Image{
 						URL: "not-empty",
 					},
-					Online: false,
+					PoweredOn: false,
 				},
 			},
 			Expected: false,
@@ -167,7 +167,7 @@ func TestHostNeedsProvisioning(t *testing.T) {
 					Image: &Image{
 						URL: "not-empty",
 					},
-					Online: true,
+					PoweredOn: true,
 				},
 				Status: BareMetalHostStatus{
 					Provisioning: ProvisionStatus{
@@ -192,7 +192,7 @@ func TestHostNeedsProvisioning(t *testing.T) {
 					Image: &Image{
 						URL: "not-empty",
 					},
-					Online: true,
+					PoweredOn: true,
 				},
 				Status: BareMetalHostStatus{
 					Provisioning: ProvisionStatus{

@@ -268,3 +268,20 @@ func TestSecretAccessErrorConversion(t *testing.T) {
 	g.Expect(restored.ConvertFrom(hub)).To(gomega.Succeed())
 	g.Expect(restored.Status.ErrorType).To(gomega.Equal(SecretAccessError))
 }
+
+// TestPoweredOnConversion checks that the v1alpha1 Online field is mapped to
+// the renamed v1beta1 PoweredOn field and back.
+func TestPoweredOnConversion(t *testing.T) {
+	for _, value := range []bool{true, false} {
+		g := gomega.NewWithT(t)
+
+		spoke := &BareMetalHost{Spec: BareMetalHostSpec{Online: value}}
+		hub := &metal3apiv1beta1.BareMetalHost{}
+		g.Expect(spoke.ConvertTo(hub)).To(gomega.Succeed())
+		g.Expect(hub.Spec.PoweredOn).To(gomega.Equal(value))
+
+		restored := &BareMetalHost{}
+		g.Expect(restored.ConvertFrom(hub)).To(gomega.Succeed())
+		g.Expect(restored.Spec.Online).To(gomega.Equal(value))
+	}
+}

@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metal3apiv1beta1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1beta1"
+	apiconversion "k8s.io/apimachinery/pkg/conversion"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
@@ -57,6 +58,26 @@ func (dst *BareMetalHost) ConvertFrom(srcRaw conversion.Hub) error {
 	if err := Convert_v1beta1_BareMetalHost_To_v1alpha1_BareMetalHost(src, dst, nil); err != nil {
 		return err
 	}
+	return nil
+}
+
+// Convert_v1alpha1_BareMetalHostSpec_To_v1beta1_BareMetalHostSpec converts
+// the spec to v1beta1, mapping the Online field to its v1beta1 name PoweredOn.
+func Convert_v1alpha1_BareMetalHostSpec_To_v1beta1_BareMetalHostSpec(in *BareMetalHostSpec, out *metal3apiv1beta1.BareMetalHostSpec, s apiconversion.Scope) error {
+	if err := autoConvert_v1alpha1_BareMetalHostSpec_To_v1beta1_BareMetalHostSpec(in, out, s); err != nil {
+		return err
+	}
+	out.PoweredOn = in.Online
+	return nil
+}
+
+// Convert_v1beta1_BareMetalHostSpec_To_v1alpha1_BareMetalHostSpec converts
+// the spec to v1alpha1, mapping the PoweredOn field to its v1alpha1 name Online.
+func Convert_v1beta1_BareMetalHostSpec_To_v1alpha1_BareMetalHostSpec(in *metal3apiv1beta1.BareMetalHostSpec, out *BareMetalHostSpec, s apiconversion.Scope) error {
+	if err := autoConvert_v1beta1_BareMetalHostSpec_To_v1alpha1_BareMetalHostSpec(in, out, s); err != nil {
+		return err
+	}
+	out.Online = in.PoweredOn
 	return nil
 }
 
