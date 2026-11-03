@@ -268,3 +268,99 @@ func TestSecretAccessErrorConversion(t *testing.T) {
 	g.Expect(restored.ConvertFrom(hub)).To(gomega.Succeed())
 	g.Expect(restored.Status.ErrorType).To(gomega.Equal(SecretAccessError))
 }
+
+// TestFirmwareConversion checks that the Firmware fields, which were removed in
+// v1beta1, survive a v1alpha1 -> v1beta1 -> v1alpha1 round-trip via the
+// conversion-data annotation, and that the annotation is only added to the hub
+// when needed and never leaks onto the spoke.
+func TestFirmwareConversion(t *testing.T) {
+	firmware := &FirmwareConfig{
+		VirtualizationEnabled:             ptr.To(true),
+		SimultaneousMultithreadingEnabled: ptr.To(false),
+	}
+
+	testCases := []struct {
+		name           string
+		specFirmware   *FirmwareConfig
+		statusFirmware *FirmwareConfig
+		annotations    map[string]string
+		expectStash    bool
+	}{
+		{
+			name: "no firmware",
+		},
+		{
+			name:        "no firmware, other annotations",
+			annotations: map[string]string{"foo": "bar"},
+		},
+		{
+			name:         "spec firmware",
+			specFirmware: firmware,
+			expectStash:  true,
+		},
+		{
+			name:           "status firmware",
+			statusFirmware: firmware,
+			expectStash:    true,
+		},
+		{
+			name:           "spec and status firmware, other annotations",
+			specFirmware:   firmware,
+			statusFirmware: &FirmwareConfig{SriovEnabled: ptr.To(true)},
+			annotations:    map[string]string{"foo": "bar"},
+			expectStash:    true,
+		},
+		{
+			name:         "empty spec firmware",
+			specFirmware: &FirmwareConfig{},
+			expectStash:  true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := gomega.NewWithT(t)
+
+			spoke := &BareMetalHost{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "host",
+					Annotations: maps.Clone(tc.annotations),
+				},
+				Spec: BareMetalHostSpec{
+					Firmware: tc.specFirmware.DeepCopy(),
+				},
+				Status: BareMetalHostStatus{
+					Provisioning: ProvisionStatus{
+						Firmware: tc.statusFirmware.DeepCopy(),
+					},
+				},
+			}
+			spokeBefore := spoke.DeepCopy()
+
+			hub := &metal3apiv1beta1.BareMetalHost{}
+			g.Expect(spoke.ConvertTo(hub)).To(gomega.Succeed())
+
+			// ConvertTo must not modify the source object.
+			g.Expect(spoke).To(gomega.Equal(spokeBefore))
+
+			_, stashed := hub.GetAnnotations()[DataAnnotation]
+			g.Expect(stashed).To(gomega.Equal(tc.expectStash))
+			for k, v := range tc.annotations {
+				g.Expect(hub.GetAnnotations()).To(gomega.HaveKeyWithValue(k, v))
+			}
+			hubBefore := hub.DeepCopy()
+
+			restored := &BareMetalHost{}
+			g.Expect(restored.ConvertFrom(hub)).To(gomega.Succeed())
+
+			// ConvertFrom must not modify the hub, and the annotation must not
+			// leak onto the spoke.
+			g.Expect(hub).To(gomega.Equal(hubBefore))
+			g.Expect(restored.GetAnnotations()).NotTo(gomega.HaveKey(DataAnnotation))
+
+			g.Expect(restored.Spec.Firmware).To(gomega.Equal(tc.specFirmware))
+			g.Expect(restored.Status.Provisioning.Firmware).To(gomega.Equal(tc.statusFirmware))
+			g.Expect(restored).To(gomega.Equal(spokeBefore))
+		})
+	}
+}
